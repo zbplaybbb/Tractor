@@ -34,12 +34,91 @@ namespace Kuaff.Tractor
         /// 然后，每个人手中发一次牌，然后从我开始，依次画得到牌后的界面。
         /// 其他三个人画完牌后，应该调用算法中的方法，判断是否应该亮主。
         /// </summary>
+        //牌与牌之间的水平间距（逻辑像素）；手牌多于 27 张时会自动压缩
+        internal static int CARD_STEP = 20;
+
+        //按手牌数量计算合适的步长（33 张收底时可缩到 17，仍能露出角标）
+        internal static int CalcCardStep(int index)
+        {
+            if (index <= 1) { return 20; }
+            int maxW = MainForm.LogicalWidth - 6 - 71;
+            int step = maxW / (index - 1);
+            if (step > 20) { step = 20; }
+            if (step < 11) { step = 11; }
+            return step;
+        }
+
+        //出牌区牌的横向间距（比手牌大，保证角标数字完整可见）
+        internal const int PLAYED_STEP = 22;
+
+        //手牌纵向位置（上移，避免底边被裁）
+        internal const int HAND_Y = 369;
+        internal const int HAND_Y_LIFTED = 354;
+
+        // Action buttons
+        internal static readonly Rectangle PlayButtonRect = new Rectangle(264, 300, 54, 30);
+        internal static readonly Rectangle HintButtonRect = new Rectangle(326, 300, 54, 30);
+        private static readonly Rectangle ActionButtonArea = new Rectangle(258, 294, 128, 42);
+
+        //侧栏底板：左右各 88x116
+        internal const int SIDEBAR_LEFT_X = 12;
+        internal const int SIDEBAR_RIGHT_X = 529;
+        internal const int SIDEBAR_Y = 30;
+        internal const int SIDEBAR_W = 88;
+        internal const int SIDEBAR_H = 116;
+
+        //方位字（Master.png 每格 112px）
+        internal const int MASTER_CELL = 112;
+        internal const int MASTER_SIZE = 30;
+        internal const int MASTER_Y = 38;
+        internal const int MASTER_ME_X = 539;
+        internal const int MASTER_OTHER_X = 577;
+        internal const int MASTER_WEST_X = 22;
+        internal const int MASTER_EAST_X = 60;
+
+        //侧栏数字/花色（源图每格 160px）
+        internal const int SIDEBAR_CELL = 160;
+        internal const int SIDEBAR_RANK_Y = 70;
+        internal const int SIDEBAR_SUIT_Y = 106;
+        internal const int SIDEBAR_ICON_SIZE = 32;
+        internal const int SIDEBAR_ME_X = 557;
+        internal const int SIDEBAR_OTHER_X = 40;
+        internal const int SUIT_DARK_INDEX = 5;
+
+        //出牌指示器（Winner.png 152x244 = 4 倍 38x61）
+        internal const int WINNER_W = 32;
+        internal const int WINNER_H = 50;
+
+        //指示器位置：贴近各家出牌，且全部落在出牌区清屏范围内（避免残留）
+        internal const int WINNER_ME_X = 437;
+        internal const int WINNER_ME_Y = 292;
+        internal const int WINNER_OTHER_X = 437;
+        internal const int WINNER_OTHER_Y = 152;
+        internal const int WINNER_WEST_X = 106;
+        internal const int WINNER_WEST_Y = 212;
+        internal const int WINNER_EAST_X = 486;
+        internal const int WINNER_EAST_Y = 212;
+
+        //出牌区矩形（清屏与重绘共用）
+        //主体：上沿从 y=148 开始（侧栏底边在 y=146），左右避开侧栏
+        internal const int SEND_AREA_X = 77;
+        internal const int SEND_AREA_Y = 148;
+        internal const int SEND_AREA_W = 478;
+        internal const int SEND_AREA_H = 220;
+
+        //对家出牌行在 y=124 起，单独一块，避开左右侧栏
+        internal const int SEND_NORTH_X = 103;
+        internal const int SEND_NORTH_Y = 122;
+        internal const int SEND_NORTH_W = 424;
+        internal const int SEND_NORTH_H = 30;
+
         /// <param name="count">发牌次数，一共发25张牌，每人25张，最后庄家收底</param>
         internal void ReadyCards(int count)
         {
 
             //得到缓冲区图像的Graphics
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             //画牌局的中央，洗好的牌，实际画58张,每出一轮减少两张
             DrawCenterAllCards(g, 58 - count * 2);
 
@@ -74,7 +153,7 @@ namespace Kuaff.Tractor
 
             //画西家的位置
             DrawAnimatedCard(mainForm.gameConfig.BackImage, 50, 160 + count * 4, 71, 96);
-            DrawMyImage(g, mainForm.gameConfig.BackImage, 6, 145 + count * 4, 71, 96);
+            DrawMyImage(g, mainForm.gameConfig.BackImage, 6, 157 + count * 4, 71, 96);
             mainForm.Refresh();
 
             //是否亮主
@@ -82,7 +161,7 @@ namespace Kuaff.Tractor
 
             //画东家的位置
             DrawAnimatedCard(mainForm.gameConfig.BackImage, 520, 220 - count * 4, 71, 96);
-            DrawMyImage(g, mainForm.gameConfig.BackImage, 554, 241 - count * 4, 71, 96);
+            DrawMyImage(g, mainForm.gameConfig.BackImage, 554, 253 - count * 4, 71, 96);
             mainForm.Refresh();
 
 
@@ -142,9 +221,9 @@ namespace Kuaff.Tractor
         //清除亮的牌
         private void ClearSuitCards(Graphics g)
         {
-            g.DrawImage(mainForm.image, new Rectangle(80, 158, 71, 96), new Rectangle(80, 158, 71, 96), GraphicsUnit.Pixel);
-            g.DrawImage(mainForm.image, new Rectangle(480, 200, 71, 96), new Rectangle(480, 200, 71, 96), GraphicsUnit.Pixel);
-            g.DrawImage(mainForm.image, new Rectangle(437, 124, 71, 96), new Rectangle(437, 124, 71, 96), GraphicsUnit.Pixel);
+            mainForm.DrawBackgroundRegion(g, new Rectangle(423, 124, 85, 96));
+            mainForm.DrawBackgroundRegion(g, new Rectangle(80, 158, 71, 116));
+            mainForm.DrawBackgroundRegion(g, new Rectangle(480, 200, 71, 116));
         }
 
         #endregion // 发牌动画
@@ -160,8 +239,7 @@ namespace Kuaff.Tractor
         /// <param name="num">牌的数量=58-发牌次数*2</param>
         internal void DrawCenterAllCards(Graphics g, int num)
         {
-            Rectangle rect = new Rectangle(200, 186, (num + 1) * 2 + 71, 96);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+            mainForm.DrawBackgroundRegion(g, new Rectangle(200, 186, 188, 96));
 
             for (int i = 0; i < num; i++)
             {
@@ -175,8 +253,9 @@ namespace Kuaff.Tractor
         internal void DrawCenterImage()
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
-            Rectangle rect = new Rectangle(77, 124, 476, 244);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+            mainForm.MarkRenderScaled(g);
+            mainForm.DrawBackgroundRegion(g, new Rectangle(SEND_AREA_X, SEND_AREA_Y, SEND_AREA_W, SEND_AREA_H));
+            mainForm.DrawBackgroundRegion(g, new Rectangle(SEND_NORTH_X, SEND_NORTH_Y, SEND_NORTH_W, SEND_NORTH_H));
             g.Dispose();
         }
 
@@ -186,6 +265,7 @@ namespace Kuaff.Tractor
         internal void DrawPassImage()
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             Rectangle rect = new Rectangle(110, 150, 400, 199);
             g.DrawImage(Properties.Resources.Pass, rect);
             g.Dispose();
@@ -203,33 +283,30 @@ namespace Kuaff.Tractor
         internal void DrawCenter8Cards()
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             Rectangle rect = new Rectangle(200, 186, 90, 96);
-            Rectangle backRect = new Rectangle(77, 121, 477, 254);
+            Rectangle backRect = new Rectangle(194, 138, 214, 148);
             //最后8张的图像取出来
-            Bitmap backup = mainForm.bmp.Clone(rect, PixelFormat.DontCare);
-            //将其位置用背景贴上
+            Bitmap backup = mainForm.bmp.Clone(mainForm.LogicalToDevice(rect), PixelFormat.DontCare);
             //g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
-            g.DrawImage(mainForm.image, backRect, backRect, GraphicsUnit.Pixel);
+             mainForm.DrawBackgroundRegion(g, backRect);
 
-            //将底牌8张交给庄家（动画方式）
+            //将底牌8张交给庄家（直接交牌，避免动画在超采样缓冲中残留）
+            backup.Dispose();
             if (mainForm.currentState.Master == 1)
             {
-                DrawAnimatedCard(backup, 300, 330, 90, 96);
                 Get8Cards(mainForm.pokerList[0], mainForm.pokerList[1], mainForm.pokerList[2], mainForm.pokerList[3]);
             }
             else if (mainForm.currentState.Master == 2)
             {
-                DrawAnimatedCard(backup, 200, 80, 90, 96);
                 Get8Cards(mainForm.pokerList[1], mainForm.pokerList[0], mainForm.pokerList[2], mainForm.pokerList[3]);
             }
             else if (mainForm.currentState.Master == 3)
             {
-                DrawAnimatedCard(backup, 70, 186, 90, 96);
                 Get8Cards(mainForm.pokerList[2], mainForm.pokerList[1], mainForm.pokerList[0], mainForm.pokerList[3]);
             }
             else if (mainForm.currentState.Master == 4)
             {
-                DrawAnimatedCard(backup, 400, 186, 90, 96);
                 Get8Cards(mainForm.pokerList[3], mainForm.pokerList[1], mainForm.pokerList[2], mainForm.pokerList[0]);
             }
             mainForm.Refresh();
@@ -256,6 +333,7 @@ namespace Kuaff.Tractor
         internal void DrawBottomCards(ArrayList bottom)
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
             //画底牌,从169开始画
             for (int i = 0; i < 8; i++)
@@ -284,15 +362,11 @@ namespace Kuaff.Tractor
         /// <param name="g"></param>
         internal void DrawSidebar(Graphics g)
         {
-            DrawMyImage(g, Properties.Resources.Sidebar, 20, 30, 70, 89);
-            DrawMyImage(g, Properties.Resources.Sidebar, 540, 30, 70, 89);
+            //左右各一块 88x116 的木质底板
+            DrawMyImage(g, Properties.Resources.Sidebar, SIDEBAR_LEFT_X, SIDEBAR_Y, SIDEBAR_W, SIDEBAR_H);
+            DrawMyImage(g, Properties.Resources.Sidebar, SIDEBAR_RIGHT_X, SIDEBAR_Y, SIDEBAR_W, SIDEBAR_H);
         }
-        /// <summary>
-        /// 画东西南北
-        /// </summary>
-        /// <param name="g">缓冲区图像的Graphics</param>
-        /// <param name="who">画谁</param>
-        /// <param name="b">是否画亮色</param>
+
         internal void DrawMaster(Graphics g, int who, int start)
         {
             if (who < 1 || who > 4)
@@ -300,73 +374,45 @@ namespace Kuaff.Tractor
                 return;
             }
 
-            start = start * 80;
-
+            //1=我(南) 2=对家(北) 3=西家 4=东家；start: 0=绿色常态, 1=红色庄家
+            int cell = 0;
             int X = 0;
+            if (who == 1) { cell = 2; X = MASTER_ME_X; }
+            else if (who == 2) { cell = 3; X = MASTER_OTHER_X; }
+            else if (who == 3) { cell = 0; X = MASTER_WEST_X; }
+            else if (who == 4) { cell = 1; X = MASTER_EAST_X; }
 
-            if (who == 1)
-            {
-                start += 40;
-                X = 548;
-            }
-            else if (who == 2)
-            {
-                start += 60;
-                X = 580;
-            }
-            else if (who == 3)
-            {
-                start += 0;
-                X = 30;
-            }
-            else if (who == 4)
-            {
-                start += 20;
-                X = 60;
-            }
+            int srcX = (start == 0 ? cell : cell + 4) * MASTER_CELL;
+            Rectangle destRect = new Rectangle(X, MASTER_Y, MASTER_SIZE, MASTER_SIZE);
+            g.DrawImage(Properties.Resources.Master, destRect, new Rectangle(srcX, 0, MASTER_CELL, MASTER_CELL), GraphicsUnit.Pixel);
+        }
 
-            Rectangle destRect = new Rectangle(X, 45, 20, 20);
-            Rectangle srcRect = new Rectangle(start, 0, 20, 20);
 
-            g.DrawImage(Properties.Resources.Master, destRect, srcRect, GraphicsUnit.Pixel);
-
+        //画单个绿色的方位字
+        private void DrawMasterCell(Graphics g, int who, int cell, int X)
+        {
+            if (who == mainForm.currentState.Master)
+            {
+                return;
+            }
+            g.DrawImage(Properties.Resources.Master,
+                new Rectangle(X, MASTER_Y, MASTER_SIZE, MASTER_SIZE),
+                new Rectangle(cell * MASTER_CELL, 0, MASTER_CELL, MASTER_CELL),
+                GraphicsUnit.Pixel);
         }
 
         /// <summary>
-        /// 画其他白色
         /// </summary>
         /// <param name="g"></param>
         /// <param name="who"></param>
         /// <param name="start"></param>
         internal void DrawOtherMaster(Graphics g, int who, int start)
         {
-            
-
-            if (who != 1)
-            {
-                Rectangle destRect = new Rectangle(548, 45, 20, 20);
-                Rectangle srcRect = new Rectangle(40, 0, 20, 20);
-                g.DrawImage(Properties.Resources.Master, destRect, srcRect, GraphicsUnit.Pixel);
-            }
-            if (who != 2)
-            {
-                Rectangle destRect = new Rectangle(580, 45, 20, 20);
-                Rectangle srcRect = new Rectangle(60, 0, 20, 20);
-                g.DrawImage(Properties.Resources.Master, destRect, srcRect, GraphicsUnit.Pixel);
-            }
-            if (who != 3)
-            {
-                Rectangle destRect = new Rectangle(31, 45, 20, 20);
-                Rectangle srcRect = new Rectangle(0, 0, 20, 20);
-                g.DrawImage(Properties.Resources.Master, destRect, srcRect, GraphicsUnit.Pixel);
-            }
-            if (who != 4)
-            {
-                Rectangle destRect = new Rectangle(61, 45, 20, 20);
-                Rectangle srcRect = new Rectangle(20, 0, 20, 20);
-                g.DrawImage(Properties.Resources.Master, destRect, srcRect, GraphicsUnit.Pixel);
-            }
-
+            //非庄家的方位字固定为绿色（忽略 start，庄家由 DrawMaster 单独画红色）
+            DrawMasterCell(g, 1, 2, MASTER_ME_X);
+            DrawMasterCell(g, 2, 3, MASTER_OTHER_X);
+            DrawMasterCell(g, 3, 0, MASTER_WEST_X);
+            DrawMasterCell(g, 4, 1, MASTER_EAST_X);
         }
 
 
@@ -382,24 +428,20 @@ namespace Kuaff.Tractor
             int X2 = 0;
             if (me)
             {
-                X = 566;
-                X2 = 46;
+                X = SIDEBAR_ME_X;
+                X2 = SIDEBAR_OTHER_X;
             }
             else
             {
-                X = 46;
-                X2 = 566;
+                X = SIDEBAR_OTHER_X;
+                X2 = SIDEBAR_ME_X;
             }
 
-            Rectangle destRect = new Rectangle(X, 68, 20, 20);
-            Rectangle destRect2 = new Rectangle(X2, 68, 20, 20);
+            Rectangle destRect = new Rectangle(X, SIDEBAR_RANK_Y, SIDEBAR_ICON_SIZE, SIDEBAR_ICON_SIZE);
+            Rectangle destRect2 = new Rectangle(X2, SIDEBAR_RANK_Y, SIDEBAR_ICON_SIZE, SIDEBAR_ICON_SIZE);
 
-
-
-            //然后将数字填写上
             if (!b)
             {
-                g.DrawImage(Properties.Resources.Sidebar, destRect, new Rectangle(26, 38, 20, 20), GraphicsUnit.Pixel);
                 if (me)
                 {
                     g.DrawImage(Properties.Resources.CardNumber, destRect, getCardNumberImage(mainForm.currentState.OurCurrentRank, b), GraphicsUnit.Pixel);
@@ -408,13 +450,9 @@ namespace Kuaff.Tractor
                 {
                     g.DrawImage(Properties.Resources.CardNumber, destRect, getCardNumberImage(mainForm.currentState.OpposedCurrentRank, b), GraphicsUnit.Pixel);
                 }
-
             }
             else
             {
-                g.DrawImage(Properties.Resources.Sidebar, destRect, new Rectangle(26, 38, 20, 20), GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Sidebar, destRect2, new Rectangle(26, 38, 20, 20), GraphicsUnit.Pixel);
-
                 if (me)
                 {
                     g.DrawImage(Properties.Resources.CardNumber, destRect, getCardNumberImage(mainForm.currentState.OurCurrentRank, b), GraphicsUnit.Pixel);
@@ -426,7 +464,6 @@ namespace Kuaff.Tractor
                     g.DrawImage(Properties.Resources.CardNumber, destRect2, getCardNumberImage(mainForm.currentState.OurCurrentRank, !b), GraphicsUnit.Pixel);
                 }
             }
-
         }
 
         private Rectangle getCardNumberImage(int number, bool b)
@@ -439,22 +476,35 @@ namespace Kuaff.Tractor
                 {
                     number += 14;
                 }
-                result = new Rectangle(number * 20, 0, 20, 20);
+                result = new Rectangle(number * SIDEBAR_CELL, 0, SIDEBAR_CELL, SIDEBAR_CELL);
             }
 
 
             if ((number == 53) && (b))
             {
-                result = new Rectangle(540, 0, 20, 20);
+                result = new Rectangle(27 * SIDEBAR_CELL, 0, SIDEBAR_CELL, SIDEBAR_CELL);
             }
             if ((number == 53) && (!b))
             {
-                result = new Rectangle(260, 0, 20, 20);
+                result = new Rectangle(13 * SIDEBAR_CELL, 0, SIDEBAR_CELL, SIDEBAR_CELL);
             }
 
             return result;
         }
 
+
+        private void ClearSidebarIcon(Graphics g, Rectangle destRect)
+        {
+            int sidebarX = destRect.X >= SIDEBAR_RIGHT_X ? SIDEBAR_RIGHT_X : SIDEBAR_LEFT_X;
+            double scaleX = Properties.Resources.Sidebar.Width / (double)SIDEBAR_W;
+            double scaleY = Properties.Resources.Sidebar.Height / (double)SIDEBAR_H;
+            Rectangle sourceRect = new Rectangle(
+                (int)Math.Round((destRect.X - sidebarX) * scaleX),
+                (int)Math.Round((destRect.Y - SIDEBAR_Y) * scaleY),
+                (int)Math.Round(destRect.Width * scaleX),
+                (int)Math.Round(destRect.Height * scaleY));
+            g.DrawImage(Properties.Resources.Sidebar, destRect, sourceRect, GraphicsUnit.Pixel);
+        }
 
         /// <summary>
         /// 画花色
@@ -469,68 +519,30 @@ namespace Kuaff.Tractor
             int X2 = 0;
             if (me)
             {
-                X = 563;
-                X2 = 43;
+                X = SIDEBAR_ME_X;
+                X2 = SIDEBAR_OTHER_X;
             }
             else
             {
-                X = 43;
-                X2 = 563;
+                X = SIDEBAR_OTHER_X;
+                X2 = SIDEBAR_ME_X;
             }
 
-            Rectangle destRect = new Rectangle(X, 88, 25, 25);
+            Rectangle destRect = new Rectangle(X, SIDEBAR_SUIT_Y, SIDEBAR_ICON_SIZE, SIDEBAR_ICON_SIZE);
+            Rectangle redrawRect = new Rectangle(X2, SIDEBAR_SUIT_Y, SIDEBAR_ICON_SIZE, SIDEBAR_ICON_SIZE);
+            Rectangle darkSrc = new Rectangle(SUIT_DARK_INDEX * SIDEBAR_CELL, 0, SIDEBAR_CELL, SIDEBAR_CELL);
 
-            Rectangle redrawRect = new Rectangle(X2, 88, 25, 25);
-
-            //如果画暗色
+            ClearSidebarIcon(g, destRect);
             if (!b)
             {
-                Rectangle srcRect = new Rectangle(250, 0, 25, 25);
-                g.DrawImage(Properties.Resources.Suit, destRect, srcRect, GraphicsUnit.Pixel);
+                g.DrawImage(Properties.Resources.Suit, destRect, darkSrc, GraphicsUnit.Pixel);
                 return;
             }
 
-            if (suit == 1)
-            {
-                Rectangle srcRect = new Rectangle(0, 0, 25, 25);
-                g.DrawImage(Properties.Resources.Sidebar, destRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Suit, destRect, srcRect, GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Sidebar, redrawRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                DrawSuit(g, 0, !me, false);
-            }
-            else if (suit == 2)
-            {
-                Rectangle srcRect = new Rectangle(25, 0, 25, 25);
-                g.DrawImage(Properties.Resources.Sidebar, destRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Suit, destRect, srcRect, GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Sidebar, redrawRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                DrawSuit(g, 0, !me, false);
-            }
-            else if (suit == 3) //方块
-            {
-                Rectangle srcRect = new Rectangle(50, 0, 25, 25);
-                g.DrawImage(Properties.Resources.Sidebar, destRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Suit, destRect, srcRect, GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Sidebar, redrawRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                DrawSuit(g, 0, !me, false);
-            }
-            else if (suit == 4)//梅花club
-            {
-                Rectangle srcRect = new Rectangle(75, 0, 25, 25);
-                g.DrawImage(Properties.Resources.Sidebar, destRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Suit, destRect, srcRect, GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Sidebar, redrawRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                DrawSuit(g, 0, !me, false);
-            }
-            else if (suit == 5)
-            {
-                Rectangle srcRect = new Rectangle(100, 0, 25, 25);
-                g.DrawImage(Properties.Resources.Sidebar, destRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Suit, destRect, srcRect, GraphicsUnit.Pixel);
-                g.DrawImage(Properties.Resources.Sidebar, redrawRect, new Rectangle(23, 58, 25, 25), GraphicsUnit.Pixel);
-                DrawSuit(g, 0, !me, false);
-            }
-
+            ClearSidebarIcon(g, redrawRect);
+            int suitIndex = Math.Max(0, Math.Min(4, suit - 1));
+            g.DrawImage(Properties.Resources.Suit, destRect, new Rectangle(suitIndex * SIDEBAR_CELL, 0, SIDEBAR_CELL, SIDEBAR_CELL), GraphicsUnit.Pixel);
+            g.DrawImage(Properties.Resources.Suit, redrawRect, darkSrc, GraphicsUnit.Pixel);
         }
 
         /// <summary>
@@ -539,9 +551,10 @@ namespace Kuaff.Tractor
         internal void DrawToolbar()
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             g.DrawImage(Properties.Resources.Toolbar, new Rectangle(415, 325, 129, 29), new Rectangle(0, 0, 129, 29), GraphicsUnit.Pixel);
             //画五种暗花色
-            g.DrawImage(Properties.Resources.Suit, new Rectangle(417, 327, 125, 25), new Rectangle(125, 0, 125, 25), GraphicsUnit.Pixel);
+            DrawToolbarSuits(g, new bool[5]);
             g.Dispose();
         }
 
@@ -551,7 +564,8 @@ namespace Kuaff.Tractor
         internal void RemoveToolbar()
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
-            g.DrawImage(mainForm.image, new Rectangle(415, 325, 129, 29), new Rectangle(415, 325, 129, 29), GraphicsUnit.Pixel);
+            mainForm.MarkRenderScaled(g);
+            mainForm.DrawBackgroundRegion(g, new Rectangle(415, 325, 129, 29));
             g.Dispose();
         }
 
@@ -587,7 +601,8 @@ namespace Kuaff.Tractor
 
                     //既然已经确定了谁亮的，谁是主，打几，那么就画吧
 
-                    Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
                     //亮主的时候同时画花色,亮色显示在庄家下面
                     if ((mainForm.currentState.Master == 1) || (mainForm.currentState.Master == 2))
@@ -651,7 +666,8 @@ namespace Kuaff.Tractor
 
 
 
-                    Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
                     //亮主的时候同时画花色,亮色显示在庄家下面
                     if ((mainForm.currentState.Master == 1) || (mainForm.currentState.Master == 2))
@@ -700,19 +716,10 @@ namespace Kuaff.Tractor
         internal void ReDrawToolbar(bool[] suits)
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             g.DrawImage(Properties.Resources.Toolbar, new Rectangle(415, 325, 129, 29), new Rectangle(0, 0, 129, 29), GraphicsUnit.Pixel);
             //画五种暗花色
-            for (int i = 0; i < 5; i++)
-            {
-                if (suits[i])
-                {
-                    g.DrawImage(Properties.Resources.Suit, new Rectangle(417 + i * 25, 327, 25, 25), new Rectangle(i * 25, 0, 25, 25), GraphicsUnit.Pixel);
-                }
-                else
-                {
-                    g.DrawImage(Properties.Resources.Suit, new Rectangle(417 + i * 25, 327, 25, 25), new Rectangle(125 + i * 25, 0, 25, 25), GraphicsUnit.Pixel);
-                }
-            }
+            DrawToolbarSuits(g, suits);
             g.Dispose();
         }
 
@@ -759,7 +766,8 @@ namespace Kuaff.Tractor
                     {
                         mainForm.currentState.Master = 1;
                     }
-                    Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
                     if ((mainForm.currentState.Master == 1) || (mainForm.currentState.Master == 2))
                     {
@@ -787,7 +795,8 @@ namespace Kuaff.Tractor
                 {
                     mainForm.showSuits++;
                     mainForm.whoShowRank = 1;
-                    Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
                     mainForm.currentState.Suit = 2;
                     if ((mainForm.currentRank == 0) && mainForm.isNew)
                     {
@@ -821,7 +830,8 @@ namespace Kuaff.Tractor
                 {
                     mainForm.showSuits++;
                     mainForm.whoShowRank = 1;
-                    Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
                     mainForm.currentState.Suit = 3;
                     if ((mainForm.currentRank == 0) && mainForm.isNew)
                     {
@@ -856,7 +866,8 @@ namespace Kuaff.Tractor
                 {
                     mainForm.showSuits++;
                     mainForm.whoShowRank = 1;
-                    Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
                     mainForm.currentState.Suit = 4;
                     if ((mainForm.currentRank == 0) && mainForm.isNew)
                     {
@@ -890,7 +901,8 @@ namespace Kuaff.Tractor
                 {
                     mainForm.showSuits = 3;
                     mainForm.whoShowRank = 1;
-                    Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
                     mainForm.currentState.Suit = 5;
                     if ((mainForm.currentRank == 0) && mainForm.isNew)
                     {
@@ -936,12 +948,13 @@ namespace Kuaff.Tractor
         {
             int j = 0;
 
-            //清下面的屏幕
-            Rectangle rect = new Rectangle(30, 360, 560, 96);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+            //清下面的屏幕（覆盖整块画布，避免多张牌溢出右侧留下残片）
+            Rectangle rect = new Rectangle(-mainForm.ContentOffsetX, HAND_Y_LIFTED, mainForm.CanvasWidth, 116);
 
-            //确定绘画起始位置
-            int start = (int)((2780 - index * 75) / 10);
+ mainForm.DrawBackgroundRegion(g, rect);
+            //确定绘画起始位置（步长按张数自适应）
+            CARD_STEP = CalcCardStep(index);
+            int start = Math.Max(2, (MainForm.LogicalWidth - ((index - 1) * CARD_STEP + 71)) / 2);
 
             //红桃
             j = DrawMyHearts(g, currentPoker, j, start);
@@ -999,13 +1012,15 @@ namespace Kuaff.Tractor
 
 
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
-            //清下面的屏幕
-            Rectangle rect = new Rectangle(30, 355, 600, 116);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+            //清下面的屏幕（覆盖整块画布，避免多张牌溢出右侧留下残片）
+            Rectangle rect = new Rectangle(-mainForm.ContentOffsetX, HAND_Y_LIFTED, mainForm.CanvasWidth, 116);
 
-            //计算初始位置
-            int start = (int)((2780 - index * 75) / 10);
+ mainForm.DrawBackgroundRegion(g, rect);
+            //计算初始位置（步长按张数自适应）
+            CARD_STEP = CalcCardStep(index);
+            int start = Math.Max(2, (MainForm.LogicalWidth - ((index - 1) * CARD_STEP + 71)) / 2);
 
 
             //记录每张牌的X值
@@ -1127,13 +1142,15 @@ namespace Kuaff.Tractor
             mainForm.cardsOrderNumber = 0;
 
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
-            //清下面的屏幕
-            Rectangle rect = new Rectangle(30, 355, 600, 116);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+            //清下面的屏幕（覆盖整块画布，避免多张牌溢出右侧留下残片）
+            Rectangle rect = new Rectangle(-mainForm.ContentOffsetX, HAND_Y_LIFTED, mainForm.CanvasWidth, 116);
             DrawScoreImage(mainForm.Scores);
+             mainForm.DrawBackgroundRegion(g, rect);
 
-            int start = (int)((2780 - index * 75) / 10);
+            CARD_STEP = CalcCardStep(index);
+            int start = Math.Max(2, (MainForm.LogicalWidth - ((index - 1) * CARD_STEP + 71)) / 2);
 
             //Rank(分主、副Rank)
             //记录每张牌的X值
@@ -1228,23 +1245,110 @@ namespace Kuaff.Tractor
             j = DrawBigJack2(g, currentPoker, j, start);
 
 
-            //判断当前的出的牌是否有效,如果有效，画小猪
-            Rectangle pigRect = new Rectangle(296, 300, 53, 46);
-            if (TractorRules.IsInvalid(mainForm, mainForm.currentSendCards, 1) && (mainForm.currentState.CurrentCardCommands == CardCommands.WaitingForMySending))
-            {
-                g.DrawImage(Properties.Resources.Ready, pigRect);
-            }
-            else
-            {
-                g.DrawImage(mainForm.image, pigRect, pigRect, GraphicsUnit.Pixel);
-            }
-
-
-            My8CardsIsReady(g);
+            DrawActionButtons(g);
 
             g.Dispose();
         }
 
+        internal void DrawActionButtons()
+        {
+            if (!CanShowActionButtons())
+            {
+                return;
+            }
+
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+            DrawActionButtons(g);
+            g.Dispose();
+        }
+
+        internal void HideActionButtons()
+        {
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+            mainForm.DrawBackgroundRegion(g, ActionButtonArea);
+            g.Dispose();
+        }
+
+        private bool CanShowActionButtons()
+        {
+            if (mainForm.whoseOrder != 1)
+            {
+                return false;
+            }
+
+            return mainForm.currentState.CurrentCardCommands == CardCommands.WaitingForMySending
+                || mainForm.currentState.CurrentCardCommands == CardCommands.WaitingForSending8Cards;
+        }
+
+        private void DrawActionButtons(Graphics g)
+        {
+            if (!CanShowActionButtons())
+            {
+                return;
+            }
+
+            bool waitingForPlay = mainForm.currentState.CurrentCardCommands == CardCommands.WaitingForMySending;
+            bool canPlay;
+            if (waitingForPlay)
+            {
+                canPlay = TractorRules.IsInvalid(mainForm, mainForm.currentSendCards, 1);
+            }
+            else
+            {
+                int selected = 0;
+                for (int i = 0; i < mainForm.myCardIsReady.Count; i++)
+                {
+                    if ((bool)mainForm.myCardIsReady[i])
+                    {
+                        selected++;
+                    }
+                }
+                canPlay = selected == 8;
+            }
+
+            DrawTextButton(g, PlayButtonRect, "出牌", canPlay, false);
+            DrawTextButton(g, HintButtonRect, "提示", waitingForPlay, waitingForPlay && mainForm.hintActive);
+        }
+
+        private void DrawTextButton(Graphics g, Rectangle rect, string text, bool enabled, bool active)
+        {
+            Color fill = Color.FromArgb(255, 244, 220, 164);
+            Color border = Color.FromArgb(255, 112, 72, 20);
+            Color textColor = Color.FromArgb(255, 62, 38, 8);
+            if (!enabled)
+            {
+                fill = Color.FromArgb(210, 224, 221, 210);
+                border = Color.FromArgb(210, 145, 141, 130);
+                textColor = Color.FromArgb(210, 110, 106, 96);
+            }
+            else if (active)
+            {
+                fill = Color.FromArgb(255, 255, 193, 64);
+                border = Color.FromArgb(255, 139, 83, 12);
+                textColor = Color.FromArgb(255, 48, 28, 4);
+            }
+
+            using (SolidBrush brush = new SolidBrush(fill))
+            {
+                g.FillRectangle(brush, rect);
+            }
+
+            using (Pen pen = new Pen(border, 2))
+            {
+                g.DrawRectangle(pen, rect);
+            }
+
+            using (Font font = new Font("Microsoft YaHei", 12.0f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (SolidBrush brush = new SolidBrush(textColor))
+            using (StringFormat format = new StringFormat())
+            {
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+                g.DrawString(text, font, brush, rect, format);
+            }
+        }
         private void My8CardsIsReady(Graphics g)
         {
             //如果等我扣牌
@@ -1265,7 +1369,7 @@ namespace Kuaff.Tractor
                 }
                 else
                 {
-                    g.DrawImage(mainForm.image, pigRect, pigRect, GraphicsUnit.Pixel);
+                     mainForm.DrawBackgroundRegion(g, pigRect);
 
                 }
             }
@@ -1278,12 +1382,12 @@ namespace Kuaff.Tractor
         /// <param name="readys">我出的牌的列表</param>
         internal void DrawMySendedCardsAction(ArrayList readys)
         {
-            int start = 285 - readys.Count * 7;
+            int start = 314 - ((readys.Count - 1) * PLAYED_STEP + 71) / 2;
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             for (int i = 0; i < readys.Count; i++)
             {
-                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), start, 244, 71, 96);
-                start += 14;
+                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), start + i * PLAYED_STEP, 244, 71, 96);
             }
             g.Dispose();
 
@@ -1296,12 +1400,12 @@ namespace Kuaff.Tractor
         /// <param name="readys"></param>
         private void DrawFrieldUserSendedCardsAction(ArrayList readys)
         {
-            int start = 285 - readys.Count * 7;
+            int start = 314 - ((readys.Count - 1) * PLAYED_STEP + 71) / 2;
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             for (int i = 0; i < readys.Count; i++)
             {
-                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), start, 130, 71, 96);
-                start += 14;
+                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), start + i * PLAYED_STEP, 130, 71, 96);
             }
             RedrawFrieldUserCardsAction(g, mainForm.currentPokers[1]);
 
@@ -1310,13 +1414,20 @@ namespace Kuaff.Tractor
         }
         private void RedrawFrieldUserCardsAction(Graphics g, CurrentPoker cp)
         {
-            Rectangle rect = new Rectangle(105, 25, 420, 96);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
-            int start = (int)((2500 + cp.Count * 75) / 10);
+            Rectangle rect = new Rectangle(103, 23, 424, 100);
+            mainForm.DrawBackgroundRegion(g, rect);
+            if (cp.Count <= 0)
+            {
+                return;
+            }
+            const int northAreaWidth = 424;
+            int northCardStep = cp.Count > 1 ? Math.Min(13, (northAreaWidth - 71) / (cp.Count - 1)) : 13;
+            int northTotalWidth = (cp.Count - 1) * northCardStep + 71;
+            int start = 103 + (northAreaWidth - northTotalWidth) / 2 + northTotalWidth - 71;
             for (int i = 0; i < cp.Count; i++) //最多画25张牌
             {
                 DrawMyImage(g, mainForm.gameConfig.BackImage, start, 25, 71, 96);
-                start -= 13;
+                start -= northCardStep;
             }
         }
 
@@ -1327,11 +1438,13 @@ namespace Kuaff.Tractor
         /// <param name="readys"></param>
         private void DrawPreviousUserSendedCardsAction(ArrayList readys)
         {
-            int start = 245 - readys.Count * 13;
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+            int start = 250 - ((readys.Count - 1) * PLAYED_STEP + 71);
+            if (start < 104) { start = 104; }
             for (int i = 0; i < readys.Count; i++)
             {
-                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), start + i * 13, 192, 71, 96);
+                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), start + i * PLAYED_STEP, 192, 71, 96);
             }
 
             RedrawPreviousUserCardsAction(g, mainForm.currentPokers[2]);
@@ -1340,14 +1453,21 @@ namespace Kuaff.Tractor
         }
         private void RedrawPreviousUserCardsAction(Graphics g, CurrentPoker cp)
         {
-            Rectangle rect = new Rectangle(6, 140, 71, 202);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+            Rectangle rect = new Rectangle(4, 148, 75, 204);
+            mainForm.DrawBackgroundRegion(g, rect);
 
-            int start = 195 - cp.Count * 2;
+            if (cp.Count <= 0)
+            {
+                return;
+            }
+            const int sideAreaHeight = 204;
+            int sideCardStep = cp.Count > 1 ? Math.Min(4, (sideAreaHeight - 96) / (cp.Count - 1)) : 4;
+            int sideTotalHeight = (cp.Count - 1) * sideCardStep + 96;
+            int start = 148 + (sideAreaHeight - sideTotalHeight) / 2;
             for (int i = 0; i < cp.Count; i++)  //最多画25张,因为多了不好画了，即使收底
             {
                 DrawMyImage(g, mainForm.gameConfig.BackImage, 6, start, 71, 96);
-                start += 4;
+                start += sideCardStep;
             }
         }
 
@@ -1359,9 +1479,12 @@ namespace Kuaff.Tractor
         private void DrawNextUserSendedCardsAction(ArrayList readys)
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+            int start = 378;
+            if (start + (readys.Count - 1) * PLAYED_STEP + 71 > 525) { start = 525 - ((readys.Count - 1) * PLAYED_STEP + 71); }
             for (int i = 0; i < readys.Count; i++)
             {
-                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), 326 + i * 13, 192, 71, 96);
+                DrawMyImage(g, getPokerImageByNumber((int)readys[i]), start + i * PLAYED_STEP, 192, 71, 96);
             }
 
             RedrawNextUserCardsAction(g, mainForm.currentPokers[3]);
@@ -1371,14 +1494,21 @@ namespace Kuaff.Tractor
         }
         private void RedrawNextUserCardsAction(Graphics g, CurrentPoker cp)
         {
-            Rectangle rect = new Rectangle(554, 136, 71, 210);
-            g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+            Rectangle rect = new Rectangle(552, 148, 75, 204);
+            mainForm.DrawBackgroundRegion(g, rect);
             //554, 241 - count * 4, 71, 96
-            int start = 191 + cp.Count * 2;
+            if (cp.Count <= 0)
+            {
+                return;
+            }
+            const int sideAreaHeight = 204;
+            int sideCardStep = cp.Count > 1 ? Math.Min(4, (sideAreaHeight - 96) / (cp.Count - 1)) : 4;
+            int sideTotalHeight = (cp.Count - 1) * sideCardStep + 96;
+            int start = 148 + (sideAreaHeight - sideTotalHeight) / 2 + sideTotalHeight - 96;
             for (int i = 0; i < cp.Count; i++)
             {
                 DrawMyImage(g, mainForm.gameConfig.BackImage, 554, start, 71, 96);
-                start -= 4;
+                start -= sideCardStep;
             }
         }
 
@@ -1476,47 +1606,47 @@ namespace Kuaff.Tractor
 
             if (count == 1)
             {
-                SetCardsInformation(start + j * 13, number, false);
+                SetCardsInformation(start + j * CARD_STEP, number, false);
                 if (mainForm.whoShowRank == 1 && b)
                 {
                     if (number == 52 || number == 53)
                     {
-                        g.DrawImage(getPokerImageByNumber(number), start + j * 13, 375, 71, 96); //单个的王不被提上
+                        g.DrawImage(getPokerImageByNumber(number), start + j * CARD_STEP, HAND_Y, 71, 96); //单个的王不被提上
                     }
                     else
                     {
-                        g.DrawImage(getPokerImageByNumber(number), start + j * 13, 360, 71, 96);
+                        g.DrawImage(getPokerImageByNumber(number), start + j * CARD_STEP, HAND_Y_LIFTED, 71, 96);
                     }
                 }
                 else
                 {
-                    g.DrawImage(getPokerImageByNumber(number), start + j * 13, 375, 71, 96);
+                    g.DrawImage(getPokerImageByNumber(number), start + j * CARD_STEP, HAND_Y, 71, 96);
                 }
 
                 j++;
             }
             else if (count == 2)
             {
-                SetCardsInformation(start + j * 13, number, false);
+                SetCardsInformation(start + j * CARD_STEP, number, false);
 
                 if (mainForm.whoShowRank == 1 && b && mainForm.showSuits >= 1)
                 {
-                    g.DrawImage(getPokerImageByNumber(number), start + j * 13, 360, 71, 96);
+                    g.DrawImage(getPokerImageByNumber(number), start + j * CARD_STEP, HAND_Y_LIFTED, 71, 96);
                 }
                 else
                 {
-                    g.DrawImage(getPokerImageByNumber(number), start + j * 13, 375, 71, 96);
+                    g.DrawImage(getPokerImageByNumber(number), start + j * CARD_STEP, HAND_Y, 71, 96);
                 }
                 
                 j++;
-                SetCardsInformation(start + j * 13, number, false);
+                SetCardsInformation(start + j * CARD_STEP, number, false);
                 if (mainForm.whoShowRank == 1 && b && mainForm.showSuits >= 2)
                 {
-                    g.DrawImage(getPokerImageByNumber(number), start + j * 13, 360, 71, 96);
+                    g.DrawImage(getPokerImageByNumber(number), start + j * CARD_STEP, HAND_Y_LIFTED, 71, 96);
                 }
                 else
                 {
-                    g.DrawImage(getPokerImageByNumber(number), start + j * 13, 375, 71, 96);
+                    g.DrawImage(getPokerImageByNumber(number), start + j * CARD_STEP, HAND_Y, 71, 96);
                 }
 
                 j++;
@@ -1532,12 +1662,12 @@ namespace Kuaff.Tractor
         {
             if (currentPoker.BigJack == 1)
             {
-                j = DrawMyOneOrTwoCards2(g, j, 53, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, 53, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             else if (currentPoker.BigJack == 2)
             {
-                j = DrawMyOneOrTwoCards2(g, j, 53, start + j * 13, 355, 71, 96) + 1;
-                j = DrawMyOneOrTwoCards2(g, j, 53, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, 53, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, 53, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             return j;
         }
@@ -1546,12 +1676,12 @@ namespace Kuaff.Tractor
         {
             if (currentPoker.SmallJack == 1)
             {
-                j = DrawMyOneOrTwoCards2(g, j, 52, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, 52, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             else if (currentPoker.SmallJack == 2)
             {
-                j = DrawMyOneOrTwoCards2(g, j, 52, start + j * 13, 355, 71, 96) + 1;
-                j = DrawMyOneOrTwoCards2(g, j, 52, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, 52, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, 52, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             return j;
         }
@@ -1560,12 +1690,12 @@ namespace Kuaff.Tractor
         {
             if (currentPoker.DiamondsRankTotal == 1)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 26, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 26, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             else if (currentPoker.DiamondsRankTotal == 2)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 26, start + j * 13, 355, 71, 96) + 1;
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 26, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 26, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 26, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             return j;
         }
@@ -1574,12 +1704,12 @@ namespace Kuaff.Tractor
         {
             if (currentPoker.ClubsRankTotal == 1)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 39, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 39, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             else if (currentPoker.ClubsRankTotal == 2)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 39, start + j * 13, 355, 71, 96) + 1;
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 39, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 39, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 39, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             return j;
         }
@@ -1588,12 +1718,12 @@ namespace Kuaff.Tractor
         {
             if (currentPoker.PeachsRankTotal == 1)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 13, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 13, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             else if (currentPoker.PeachsRankTotal == 2)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 13, start + j * 13, 355, 71, 96) + 1;
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 13, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 13, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank + 13, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             return j;
         }
@@ -1602,12 +1732,12 @@ namespace Kuaff.Tractor
         {
             if (currentPoker.HeartsRankTotal == 1)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             else if (currentPoker.HeartsRankTotal == 2)
             {
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank, start + j * 13, 355, 71, 96) + 1;
-                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank, start + j * 13, 355, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                j = DrawMyOneOrTwoCards2(g, j, mainForm.currentRank, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
             }
             return j;
         }
@@ -1618,12 +1748,12 @@ namespace Kuaff.Tractor
             {
                 if (currentPoker.ClubsNoRank[i] == 1)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i + 39, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 39, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
                 else if (currentPoker.ClubsNoRank[i] == 2)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i + 39, start + j * 13, 355, 71, 96) + 1;
-                    j = DrawMyOneOrTwoCards2(g, j, i + 39, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 39, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 39, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
             }
             return j;
@@ -1635,12 +1765,12 @@ namespace Kuaff.Tractor
             {
                 if (currentPoker.DiamondsNoRank[i] == 1)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i + 26, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 26, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
                 else if (currentPoker.DiamondsNoRank[i] == 2)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i + 26, start + j * 13, 355, 71, 96) + 1;
-                    j = DrawMyOneOrTwoCards2(g, j, i + 26, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 26, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 26, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
             }
             return j;
@@ -1652,12 +1782,12 @@ namespace Kuaff.Tractor
             {
                 if (currentPoker.PeachsNoRank[i] == 1)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i + 13, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 13, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
                 else if (currentPoker.PeachsNoRank[i] == 2)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i + 13, start + j * 13, 355, 71, 96) + 1;
-                    j = DrawMyOneOrTwoCards2(g, j, i + 13, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 13, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i + 13, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
             }
             return j;
@@ -1669,12 +1799,12 @@ namespace Kuaff.Tractor
             {
                 if (currentPoker.HeartsNoRank[i] == 1)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
                 else if (currentPoker.HeartsNoRank[i] == 2)
                 {
-                    j = DrawMyOneOrTwoCards2(g, j, i, start + j * 13, 355, 71, 96) + 1;
-                    j = DrawMyOneOrTwoCards2(g, j, i, start + j * 13, 355, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
+                    j = DrawMyOneOrTwoCards2(g, j, i, start + j * CARD_STEP, HAND_Y_LIFTED + 1, 71, 96) + 1;
                 }
             }
             return j;
@@ -1703,6 +1833,8 @@ namespace Kuaff.Tractor
         /// </summary>
         internal void DrawMyFinishSendedCards()
         {
+            HideActionButtons();
+            mainForm.hintActive = false;
             //在中央画出点出的牌
             DrawMySendedCardsAction(mainForm.currentSendCards[0]);
 
@@ -1719,9 +1851,10 @@ namespace Kuaff.Tractor
             }
             else //重新下部空间
             {
-                Rectangle rect = new Rectangle(30, 355, 560, 116);
+                Rectangle rect = new Rectangle(-mainForm.ContentOffsetX, HAND_Y_LIFTED, mainForm.CanvasWidth, 116);
                 Graphics g = Graphics.FromImage(mainForm.bmp);
-                g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+                mainForm.MarkRenderScaled(g);
+                mainForm.DrawBackgroundRegion(g, rect);
                 g.Dispose();
             }
 
@@ -1770,14 +1903,14 @@ namespace Kuaff.Tractor
             int myCount = mainForm.currentSendCards[0].Count;
             if (myCount > 0)
             {
-                int start = 285 - myCount * 7;
-                Graphics g = Graphics.FromImage(mainForm.bmp);
-                Rectangle rect = new Rectangle(start, 254, myCount * 14 + 57, 96);
-                g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+                int start = 314 - ((myCount - 1) * PLAYED_STEP + 71) / 2;
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+                Rectangle rect = new Rectangle(start - 2, 244, myCount * PLAYED_STEP + 71, 106);
+                mainForm.DrawBackgroundRegion(g, rect);
                 for (int i = 0; i < myCount; i++)
                 {
-                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[0][i]), start, 244, 71, 96);
-                    start += 14;
+                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[0][i]), start + i * PLAYED_STEP, 244, 71, 96);
                 }
                 g.Dispose();
             }
@@ -1824,24 +1957,25 @@ namespace Kuaff.Tractor
             int myCount = mainForm.currentSendCards[3].Count;
             if (myCount > 0)
             {
-                Graphics g = Graphics.FromImage(mainForm.bmp);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
                 for (int i = 0; i < myCount; i++)
                 {
-                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[3][i]), 326 + i * 13, 192, 71, 96);
+                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[3][i]), 378 + i * PLAYED_STEP, 192, 71, 96);
                 }
                 g.Dispose();
             }
             myCount = mainForm.currentSendCards[0].Count;
             if (myCount > 0)
             {
-                int start = 285 - myCount * 7;
-                Graphics g = Graphics.FromImage(mainForm.bmp);
-                Rectangle rect = new Rectangle(start, 254, myCount * 14 + 57, 96);
-                g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+                int start = 314 - ((myCount - 1) * PLAYED_STEP + 71) / 2;
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+                Rectangle rect = new Rectangle(start - 2, 244, myCount * PLAYED_STEP + 71, 106);
+                mainForm.DrawBackgroundRegion(g, rect);
                 for (int i = 0; i < myCount; i++)
                 {
-                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[0][i]), start, 244, 71, 96);
-                    start += 14;
+                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[0][i]), start + i * PLAYED_STEP, 244, 71, 96);
                 }
                 g.Dispose();
             }
@@ -1888,14 +2022,14 @@ namespace Kuaff.Tractor
             int myCount = mainForm.currentSendCards[0].Count;
             if (myCount > 0)
             {
-                int start = 285 - myCount * 7;
-                Graphics g = Graphics.FromImage(mainForm.bmp);
-                Rectangle rect = new Rectangle(start, 254, myCount * 14 + 57, 96);
-                g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
+                int start = 314 - ((myCount - 1) * PLAYED_STEP + 71) / 2;
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+                Rectangle rect = new Rectangle(start - 2, 244, myCount * PLAYED_STEP + 71, 106);
+                mainForm.DrawBackgroundRegion(g, rect);
                 for (int i = 0; i < myCount; i++)
                 {
-                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[0][i]), start, 244, 71, 96);
-                    start += 14;
+                    DrawMyImage(g, getPokerImageByNumber((int)mainForm.currentSendCards[0][i]), start + i * PLAYED_STEP, 244, 71, 96);
                 }
                 g.Dispose();
             }
@@ -2133,26 +2267,30 @@ namespace Kuaff.Tractor
 
             if (whoWin == 1) //我
             {
-                Graphics g = Graphics.FromImage(mainForm.bmp);
-                g.DrawImage(Properties.Resources.Winner, 437, 310, 33, 53);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+                g.DrawImage(Properties.Resources.Winner, WINNER_ME_X, WINNER_ME_Y, WINNER_W, WINNER_H);
                 g.Dispose();
             }
             else if (whoWin == 2) //对家
             {
-                Graphics g = Graphics.FromImage(mainForm.bmp);
-                g.DrawImage(Properties.Resources.Winner, 437, 120, 33, 53);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+                g.DrawImage(Properties.Resources.Winner, WINNER_OTHER_X, WINNER_OTHER_Y, WINNER_W, WINNER_H);
                 g.Dispose();
             }
             else if (whoWin == 3) //西家
             {
-                Graphics g = Graphics.FromImage(mainForm.bmp);
-                g.DrawImage(Properties.Resources.Winner, 90, 218, 33, 53);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+                g.DrawImage(Properties.Resources.Winner, WINNER_WEST_X, WINNER_WEST_Y, WINNER_W, WINNER_H);
                 g.Dispose();
             }
             else if (whoWin == 4) //东家
             {
-                Graphics g = Graphics.FromImage(mainForm.bmp);
-                g.DrawImage(Properties.Resources.Winner, 516, 218, 33, 53);
+            Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
+                g.DrawImage(Properties.Resources.Winner, WINNER_EAST_X, WINNER_EAST_Y, WINNER_W, WINNER_H);
                 g.Dispose();
             }
 
@@ -2162,13 +2300,13 @@ namespace Kuaff.Tractor
         internal void DrawScoreImage(int scores)
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
             Bitmap bmp = global::Kuaff.Tractor.Properties.Resources.scores;
             Font font = new Font("宋体", 12, FontStyle.Bold);
 
             if (mainForm.currentState.Master == 2 || mainForm.currentState.Master == 4)
             {
                 Rectangle rect = new Rectangle(490, 128, 56, 56);
-                g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
                 g.DrawImage(bmp, rect);
                 int x = 506;
                 if (scores.ToString().Length ==2)
@@ -2184,7 +2322,6 @@ namespace Kuaff.Tractor
             else
             {
                 Rectangle rect = new Rectangle(85, 300, 56, 56);
-                g.DrawImage(mainForm.image, rect, rect, GraphicsUnit.Pixel);
                 g.DrawImage(bmp, rect);
                 int x = 100;
                 if (scores.ToString().Length == 2)
@@ -2204,6 +2341,7 @@ namespace Kuaff.Tractor
         internal void DrawFinishedScoreImage()
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
             Pen pen = new Pen(Color.White, 2);
             g.FillRectangle(new SolidBrush(Color.FromArgb(100, Color.White)), 77, 124, 476, 244);
@@ -2276,18 +2414,12 @@ namespace Kuaff.Tractor
         internal void DrawBackground(Graphics g)
         {
             //Bitmap image = global::Kuaff.Tractor.Properties.Resources.Backgroud;
-            g.DrawImage(mainForm.image, mainForm.ClientRectangle, mainForm.ClientRectangle,GraphicsUnit.Pixel);
+            mainForm.FillBackground(g);
         }
 
-        //画发牌动画，将中间帧动画画好后再去除
+        //发牌动画已精简化，避免在超采样缓冲区与侧栏区域产生残影与缺口
         private void DrawAnimatedCard(Bitmap card, int x, int y, int width, int height)
         {
-            Graphics g = Graphics.FromImage(mainForm.bmp);
-            Bitmap backup = mainForm.bmp.Clone(new Rectangle(x, y, width, height), PixelFormat.DontCare);
-            g.DrawImage(card, x, y, width, height);
-            mainForm.Refresh();
-            g.DrawImage(backup, x, y, width, height);
-            g.Dispose();
         }
 
         //画图的方法
@@ -2311,6 +2443,7 @@ namespace Kuaff.Tractor
         internal void TestCards()
         {
             Graphics g = Graphics.FromImage(mainForm.bmp);
+            mainForm.MarkRenderScaled(g);
 
             int count = mainForm.pokerList[0].Count;
             Font font = new Font("宋体", 9);
@@ -2350,6 +2483,28 @@ namespace Kuaff.Tractor
             }
 
             mainForm.Refresh();
+        }
+        private void DrawToolbarSuits(Graphics g, bool[] suits)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                Rectangle destRect = new Rectangle(417 + i * 25, 327, 25, 25);
+                Rectangle srcRect = new Rectangle(i * SIDEBAR_CELL, 0, SIDEBAR_CELL, SIDEBAR_CELL);
+                if (suits[i])
+                {
+                    g.DrawImage(Properties.Resources.Suit, destRect, srcRect, GraphicsUnit.Pixel);
+                }
+                else
+                {
+                    using (ImageAttributes attributes = new ImageAttributes())
+                    {
+                        ColorMatrix matrix = new ColorMatrix();
+                        matrix.Matrix33 = 0.45f;
+                        attributes.SetColorMatrix(matrix);
+                        g.DrawImage(Properties.Resources.Suit, destRect, srcRect.X, srcRect.Y, srcRect.Width, srcRect.Height, GraphicsUnit.Pixel, attributes);
+                    }
+                }
+            }
         }
     }
 }

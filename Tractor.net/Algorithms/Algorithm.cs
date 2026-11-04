@@ -162,15 +162,15 @@ namespace Kuaff.Tractor
                     {
                         suits[3] = true;
                     }
-                    else if (currentPoker.Diamonds[rank] > 0)
+                    if (currentPoker.Diamonds[rank] > 0)
                     {
                         suits[2] = true;
                     }
-                    else if (currentPoker.Peachs[rank] > 0)
+                    if (currentPoker.Peachs[rank] > 0)
                     {
                         suits[1] = true;
                     }
-                    else if (currentPoker.Hearts[rank] > 0)
+                    if (currentPoker.Hearts[rank] > 0)
                     {
                         suits[0] = true;
                     }
@@ -188,17 +188,17 @@ namespace Kuaff.Tractor
                         //
                         suits[3] = IsInvalidRank(mainForm,4);
                     }
-                    else if (currentPoker.Diamonds[rank] > 1)
+                    if (currentPoker.Diamonds[rank] > 1)
                     {
                         //是否加固，是否允许自反
                         suits[2] = IsInvalidRank(mainForm,3);
                     }
-                    else if (currentPoker.Peachs[rank] > 1)
+                    if (currentPoker.Peachs[rank] > 1)
                     {
                         //是否加固，是否允许自反
                         suits[1] = IsInvalidRank(mainForm,2);
                     }
-                    else if (currentPoker.Hearts[rank] > 1)
+                    if (currentPoker.Hearts[rank] > 1)
                     {
                         //是否加固，是否允许自反
                         suits[0] = IsInvalidRank(mainForm,1);

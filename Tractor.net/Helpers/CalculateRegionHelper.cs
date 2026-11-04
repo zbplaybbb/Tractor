@@ -29,11 +29,11 @@ namespace Kuaff.Tractor
             {
                 if ((bool)mainForm.myCardIsReady[i])
                 {
-                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], 355, 71, 96));
+                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], DrawingFormHelper.HAND_Y_LIFTED + 1, 71, 96));
                 }
                 else
                 {
-                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], 375, 71, 96));
+                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], DrawingFormHelper.HAND_Y, 71, 96));
                 }
             }
 
@@ -93,11 +93,11 @@ namespace Kuaff.Tractor
             {
                 if ((bool)mainForm.myCardIsReady[i])
                 {
-                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], 355, 71, 96));
+                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], DrawingFormHelper.HAND_Y_LIFTED + 1, 71, 96));
                 }
                 else
                 {
-                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], 375, 71, 96));
+                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], DrawingFormHelper.HAND_Y, 71, 96));
                 }
             }
 
@@ -151,11 +151,11 @@ namespace Kuaff.Tractor
             {
                 if ((bool)mainForm.myCardIsReady[i])
                 {
-                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], 355, 71, 96));
+                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], DrawingFormHelper.HAND_Y_LIFTED + 1, 71, 96));
                 }
                 else
                 {
-                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], 375, 71, 96));
+                    regions[i] = new Region(new Rectangle((int)mainForm.myCardsLocation[i], DrawingFormHelper.HAND_Y, 71, 96));
                 }
             }
 

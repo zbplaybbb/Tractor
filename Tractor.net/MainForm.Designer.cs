@@ -39,6 +39,7 @@ namespace Kuaff.Tractor
             this.RestoreToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.ExitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.FullScreenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ConfigToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.GameSpeedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
@@ -83,10 +84,7 @@ namespace Kuaff.Tractor
             // menuStrip
             // 
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.GameToolStripMenuItem,
-            this.ConfigToolStripMenuItem,
-            this.ToolsToolStripMenuItem,
-            this.HelpToolStripMenuItem});
+            this.GameToolStripMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(629, 24);
@@ -102,6 +100,10 @@ namespace Kuaff.Tractor
             this.SaveToolStripMenuItem,
             this.RestoreToolStripMenuItem,
             this.toolStripSeparator1,
+            this.GameSpeedToolStripMenuItem,
+            this.SetRulesToolStripMenuItem,
+            this.SetGameFinishedtoolStripMenuItem,
+            this.toolStripSeparator3,
             this.ExitToolStripMenuItem});
             this.GameToolStripMenuItem.Name = "GameToolStripMenuItem";
             this.GameToolStripMenuItem.Size = new System.Drawing.Size(43, 20);
@@ -160,23 +162,16 @@ namespace Kuaff.Tractor
             this.ExitToolStripMenuItem.Text = "退出";
             this.ExitToolStripMenuItem.Click += new System.EventHandler(this.MenuItem_Click);
             // 
-            // ConfigToolStripMenuItem
+            // FullScreenToolStripMenuItem
+            //
+            this.FullScreenToolStripMenuItem.Name = "FullScreenToolStripMenuItem";
+            this.FullScreenToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F11;
+            this.FullScreenToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.FullScreenToolStripMenuItem.Text = "全屏显示";
+            this.FullScreenToolStripMenuItem.Click += new System.EventHandler(this.FullScreenToolStripMenuItem_Click);
             // 
-            this.ConfigToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.GameSpeedToolStripMenuItem,
-            this.toolStripSeparator3,
-            this.CardImageToolStripMenuItem,
-            this.CardBackToolStripMenuItem,
-            this.CardDesktopToolStripMenuItem,
-            this.toolStripSeparator4,
-            this.BackMusicToolStripMenuItem,
-            this.toolStripSeparator7,
-            this.SetRulesToolStripMenuItem,
-            this.SetGameFinishedtoolStripMenuItem,
-            this.toolStripSeparator6,
-            this.RobotToolStripMenuItem,
-            this.toolStripSeparator8,
-            this.SelectAlgorithmToolStripMenuItem});
+            // ConfigToolStripMenuItem
+            //
             this.ConfigToolStripMenuItem.Name = "ConfigToolStripMenuItem";
             this.ConfigToolStripMenuItem.Size = new System.Drawing.Size(43, 20);
             this.ConfigToolStripMenuItem.Text = "设置";
@@ -461,14 +456,14 @@ namespace Kuaff.Tractor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackgroundImage = global::Kuaff.Tractor.Properties.Resources.Backgroud;
+            //this.BackgroundImage = global::Kuaff.Tractor.Properties.Resources.Backgroud;
             this.ClientSize = new System.Drawing.Size(629, 470);
             this.Controls.Add(this.menuStrip);
             this.DoubleBuffered = true;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip;
-            this.MaximizeBox = false;
+            this.MaximizeBox = true;
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "拖拉机大战";
@@ -476,6 +471,7 @@ namespace Kuaff.Tractor
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.MainForm_Paint);
             this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseClick);
             this.Resize += new System.EventHandler(this.MainForm_Resize);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyDown);
             this.menuStrip.ResumeLayout(false);
             this.menuStrip.PerformLayout();
             this.ResumeLayout(false);
@@ -494,6 +490,7 @@ namespace Kuaff.Tractor
         private System.Windows.Forms.ToolStripMenuItem RestoreToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem ExitToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem FullScreenToolStripMenuItem;
         internal System.Windows.Forms.Timer timer;
         private System.Windows.Forms.ToolStripMenuItem GameSpeedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem CardImageToolStripMenuItem;

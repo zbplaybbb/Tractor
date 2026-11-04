@@ -489,7 +489,8 @@ namespace Kuaff.Tractor
 
                 if (rank > 13)
                 {
-                    rank -= 13;
+                    mainForm.currentState.OpposedTotalRound++;
+                    rank -= 14;
                 }
                 else if (rank == 13)
                 {

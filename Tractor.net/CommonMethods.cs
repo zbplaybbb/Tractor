@@ -259,7 +259,7 @@ namespace Kuaff.Tractor
         internal static bool IsSameSuit(int a, int b, int suit, int rank)
         {
             bool b1 = IsMaster(a, suit, rank);
-            bool b2 = IsMaster(a, suit, rank);
+            bool b2 = IsMaster(b, suit, rank);
 
             if ((b1) && (b2)) //都是主，比较主
             {

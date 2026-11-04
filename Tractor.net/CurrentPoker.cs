@@ -1184,6 +1184,20 @@ namespace Kuaff.Tractor
 
 
 
+        internal CurrentPoker Clone()
+        {
+            CurrentPoker copy = (CurrentPoker)this.MemberwiseClone();
+            copy.diamonds = (int[])diamonds.Clone();
+            copy.diamondsNoRank = (int[])diamondsNoRank.Clone();
+            copy.clubs = (int[])clubs.Clone();
+            copy.clubsNoRank = (int[])clubsNoRank.Clone();
+            copy.hearts = (int[])hearts.Clone();
+            copy.heartsNoRank = (int[])heartsNoRank.Clone();
+            copy.peachs = (int[])peachs.Clone();
+            copy.peachsNoRank = (int[])peachsNoRank.Clone();
+            copy.SortCards = (int[])SortCards.Clone();
+            return copy;
+        }
         //增加一张牌
         internal void AddCard(int number)
         {
